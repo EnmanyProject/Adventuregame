@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>러브스토리 어드벤처</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #111;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
+    }
+    #game-container {
+      width: 800px;
+      margin: 50px auto;
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.7);
+      position: relative;
+    }
+    #text {
+      min-height: 180px;
+      font-size: 18px;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+    #choices {
+      margin-top: 20px;
+    }
+    .choice {
+      display: block;
+      margin: 8px 0;
+      padding: 10px;
+      background: #444;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .choice:hover {
+      background: #666;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #ccc;
+    }
+    #heroine-image {
+      position: absolute;
+      right: -180px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 150px;
+      height: 200px;
+      background: url('heroine.png') no-repeat center/cover;
+      border: 2px solid #444;
+      border-radius: 8px;
+      filter: brightness(1);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="text">게임을 불러오는 중입니다...</div>
+    <div id="choices"></div>
+    <div id="status">호감도 단계: 1 / 10</div>
+    <div id="heroine-image"></div>
+  </div>
+
+  <script>
+    let scenarioData = null;
+    let currentScene = "scene1";
+    let affection = 1;
+
+    // 타자기 효과
+    function typeWriter(text, callback) {
+      const container = document.getElementById("text");
+      container.innerHTML = "";
+      let i = 0;
+      function typing() {
+        if (i < text.length) {
+          container.innerHTML += text.charAt(i);
+          i++;
+          setTimeout(typing, 30);
+        } else if (callback) {
+          setTimeout(callback, 500);
+        }
+      }
+      typing();
+    }
+
+    // 장면 표시
+    function showScene(sceneId) {
+      if (!scenarioData || !scenarioData[sceneId]) {
+        typeWriter("시나리오를 불러올 수 없습니다. JSON 파일을 확인하세요.");
+        return;
+      }
+      const scene = scenarioData[sceneId];
+      typeWriter(scene.text, () => {
+        const choicesDiv = document.getElementById("choices");
+        choicesDiv.innerHTML = "";
+        scene.choices.forEach(choice => {
+          const btn = document.createElement("button");
+          btn.className = "choice";
+          btn.textContent = choice.text;
+          btn.onclick = () => {
+            affection += choice.affection || 0;
+            if (affection < 1) affection = 1;
+            if (affection > 10) affection = 10;
+            updateStatus();
+            showScene(choice.next);
+          };
+          choicesDiv.appendChild(btn);
+        });
+      });
+    }
+
+    // 상태 업데이트
+    function updateStatus() {
+      document.getElementById("status").innerText = "호감도 단계: " + affection + " / 10";
+      document.getElementById("heroine-image").style.filter = "brightness(" + (0.6 + affection*0.05) + ")";
+    }
+
+    // JSON 불러오기
+    fetch("scenario_full.json")
+      .then(res => res.json())
+      .then(data => {
+        scenarioData = data;
+        showScene(currentScene);
+      })
+      .catch(err => {
+        console.error("JSON 로드 오류:", err);
+        typeWriter("⚠️ 시나리오 파일을 불러올 수 없습니다.\n\nindex.html과 같은 폴더에 scenario_full.json이 있는지 확인하세요.");
+      });
+  </script>
+</body>
+</html>
